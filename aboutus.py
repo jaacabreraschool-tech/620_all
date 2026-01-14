@@ -256,13 +256,16 @@ def render(df, df_raw, selected_year):
             - LinkedIn: https://ph.linkedin.com/in/angelie-agustin
             
             ---
-            
+            """, unsafe_allow_html=True)
+            st.markdown("""
+            <p style='font-size: 14px;'>
             Angelie Agustin is a Business Continuity Consultant focused on operational resilience, 
             regulatory compliance, and data-driven reporting. With a BS in Statistics and an MA in 
             Education (Mathematics), she blends analytical rigor with thoughtful problem-solving. 
             Outside of work, she enjoys travelling, and continuously growing—now pursuing MAN at 
             Mapúa University to deepen her expertise in analytics and decision-making.
-            """)
+            </p>
+            """, unsafe_allow_html=True)
         
         with col2:
             col2_inner_left, col2_inner_center, col2_inner_right = st.columns([0.2, 0.6, 0.2])
@@ -277,9 +280,12 @@ def render(df, df_raw, selected_year):
             - LinkedIn: https://www.linkedin.com/in/catherine-p-160717178/
             
             ---
-            
-            Catherine is a Security and GRC professional with hands-on experience across the Consumer Goods & Services, Finance, FMCG, Manufacturing, Retail, and Utilities industries. She possesses deep expertise in Security Management and Administration, consistently delivering results through end-to-end security project management. And successfully led and supported various SAP, SailPoint, Pathlock, and related technology implementations, system integrations, project enhancements, rollouts, data and system migrations, and upgrades for diverse clients. Whether tackling complex security initiatives or streamlining access governance, Catherine doesn’t just meet expectations; she exceeds them and redefines the standards of excellence.
-            """)
+            """, unsafe_allow_html=True)
+            st.markdown("""
+            <p style='font-size: 14px;'>
+            Catherine is a Security and GRC professional with hands-on experience across the Consumer Goods & Services, Finance, FMCG, Manufacturing, Retail, and Utilities industries. She possesses deep expertise in Security Management and Administration, consistently delivering results through end-to-end security project management. And successfully led and supported various SAP, SailPoint, Pathlock, and related technology implementations, system integrations, project enhancements, rollouts, data and system migrations, and upgrades for diverse clients. Whether tackling complex security initiatives or streamlining access governance, Catherine doesn't just meet expectations; she exceeds them and redefines the standards of excellence.
+            </p>
+            """, unsafe_allow_html=True)
         
         with col3:
             col3_inner_left, col3_inner_center, col3_inner_right = st.columns([0.2, 0.6, 0.2])
@@ -294,9 +300,12 @@ def render(df, df_raw, selected_year):
             - LinkedIn: https://www.linkedin.com/in/jaacabrera/
             
             ---
-            
-            Juliana "Jam" is a Software Quality Assurance professional specializing in testing desktop, web, and mobile applications. With expertise in analyzing business requirements, crafting test strategies, and executing manual tests, Jam ensures high-quality deliverables across platforms. A graduate of Mapúa University, Jam is currently pursuing MAN at Mapúa University to continuously upskill.
-            """)
+            """, unsafe_allow_html=True)
+            st.markdown("""
+            <p style='font-size: 14px;'>
+            Juliana "Jam" Cabrera is a Software Quality Assurance professional with expertise in testing desktop, web, and mobile applications. Skilled in analyzing business requirements, designing test strategies, and executing manual tests, she ensures the delivery of high-quality solutions across platforms. She holds a degree in Computer Science from Mapúa University and is currently pursuing a Master of Analytics (MAN) at Mapúa University to continuously expand her knowledge and skill set.
+            </p>
+            """, unsafe_allow_html=True)
     
     # -----------------------------
     # Contact & Resources
