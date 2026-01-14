@@ -230,6 +230,6 @@ def render(df, df_raw, selected_year):
             t2.markdown(f"<div class='metric-label'>Median Tenure</div><div class='metric-value'>{median_tenure} yrs</div>", unsafe_allow_html=True)
             t3.markdown(f"<div class='metric-label'>Longest Tenure</div><div class='metric-value'>{max_tenure} yrs</div>", unsafe_allow_html=True)
 
-            fig5 = px.scatter(tenure, x="Tenure", y="Count", color="YearJoined", size="Count")
+            fig5 = px.scatter(tenure_year, x="Tenure", y="Count", color="YearJoined", size="Count")
             fig5.update_layout(height=250, margin={"l": 20, "r": 20, "t": 20, "b": 20})
-            st.plotly_chart(fig5, use_container_width=True)
+            st.plotly_chart(fig5, use_container_width=True, key=f"tenure_analysis_{selected_year}")
