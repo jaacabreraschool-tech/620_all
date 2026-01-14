@@ -210,6 +210,9 @@ def render(df, df_raw, selected_year):
             # Prepare data
             df_analysis = df_raw.copy()
             
+            # Add year filtering
+            df_analysis = df_analysis[df_analysis["Year"] == int(selected_year)]
+            
             # Create binary resignation flag
             df_analysis["Resigned"] = df_analysis["Resignee Checking"].apply(
                 lambda x: 0 if str(x).strip().upper() == "ACTIVE" else 1
@@ -297,6 +300,9 @@ def render(df, df_raw, selected_year):
             
             # Prepare data for promotion analysis
             df_promo = df_raw[df_raw["Resignee Checking"].str.strip().str.upper() == "ACTIVE"].copy()
+            
+            # Add year filtering
+            df_promo = df_promo[df_promo["Year"] == int(selected_year)]
             
             # Create binary promotion flag
             def to_promo_flag(x):

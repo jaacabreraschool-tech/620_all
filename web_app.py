@@ -116,7 +116,7 @@ tab_cols = st.columns(len(tab_names))
 for idx, (col, name) in enumerate(zip(tab_cols, tab_names)):
     # Highlight active tab
     button_type = "primary" if st.session_state.active_tab == idx else "secondary"
-    if col.button(name, key=f"tab_{idx}", width='stretch', type=button_type):
+    if col.button(name, key=f"tab_{idx}", use_container_width=True, type=button_type):
         st.session_state.active_tab = idx
         st.rerun()
 
