@@ -183,12 +183,11 @@ def render(df, df_raw, selected_year):
 
         fig_stacked.update_layout(
             barmode="stack",
-            xaxis=dict(title="Percentage", ticksuffix="%", tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
-            yaxis=dict(title="Dimensions", automargin=True, tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
+            xaxis={"title": "Percentage", "ticksuffix": "%"},
+            yaxis={"title": "Dimensions", "automargin": True},
             height=chart_height,
             margin={"l": 20, "r": 100, "t": 20, "b": 80},
-            legend_title="Rating Type",
-            font={"color": "var(--text-color)"},
+            legend_title="Rating Type"
         )
 
         st.plotly_chart(fig_stacked, use_container_width=True)
@@ -262,9 +261,8 @@ def render(df, df_raw, selected_year):
             fig.update_layout(
                 height=300,
                 margin={"l": 20, "r": 20, "t": 20, "b": 20},
-                xaxis=dict(title="Importance (%)", tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
-                yaxis=dict(title="", tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
-                font={"color": "var(--text-color)"},
+                xaxis={"title": "Importance (%)"},
+                yaxis={"title": ""},
                 showlegend=False
             )
             
@@ -285,9 +283,8 @@ def render(df, df_raw, selected_year):
             fig_corr.update_layout(
                 height=300,
                 margin={"l": 20, "r": 20, "t": 20, "b": 20},
-                xaxis=dict(title="Correlation", tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
-                yaxis=dict(title="", tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
-                font={"color": "var(--text-color)"}
+                xaxis={"title": "Correlation"},
+                yaxis={"title": ""}
             )
             
             st.plotly_chart(fig_corr, use_container_width=True)
@@ -356,9 +353,8 @@ def render(df, df_raw, selected_year):
             fig_promo.update_layout(
                 height=300,
                 margin={"l": 20, "r": 20, "t": 20, "b": 20},
-                xaxis=dict(title="Importance (%)", tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
-                yaxis=dict(title="", tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
-                font={"color": "var(--text-color)"},
+                xaxis={"title": "Importance (%)"},
+                yaxis={"title": ""},
                 showlegend=False
             )
             
@@ -379,9 +375,8 @@ def render(df, df_raw, selected_year):
             fig_corr_promo.update_layout(
                 height=300,
                 margin={"l": 20, "r": 20, "t": 20, "b": 20},
-                xaxis=dict(title="Correlation", tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
-                yaxis=dict(title="", tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
-                font={"color": "var(--text-color)"}
+                xaxis={"title": "Correlation"},
+                yaxis={"title": ""}
             )
             
             st.plotly_chart(fig_corr_promo, use_container_width=True)
