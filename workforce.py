@@ -106,7 +106,7 @@ def render(df, df_raw, selected_year):
                           color_discrete_map={"Associate": "#6495ED", "Manager & Up": "#00008B"})
             fig1.update_layout(
                 height=250,
-                margin=dict(l=20, r=20, t=20, b=20),
+                margin={"l": 20, "r": 20, "t": 20, "b": 20},
                 showlegend=True
             )
             st.plotly_chart(fig1, use_container_width=True)
@@ -142,7 +142,7 @@ def render(df, df_raw, selected_year):
                           category_orders={"Generation": generation_order})
             fig2.update_layout(
                 height=250,
-                margin=dict(l=20, r=20, t=20, b=20),
+                margin={"l": 20, "r": 20, "t": 20, "b": 20},
                 showlegend=True
             )
             st.plotly_chart(fig2, use_container_width=True)
@@ -196,7 +196,7 @@ def render(df, df_raw, selected_year):
                     y="Count",
                     color_discrete_sequence=["#ADD8E6", "#00008B"]
                 )
-            fig3.update_layout(showlegend=True, margin=dict(l=20, r=20, t=20, b=20), height=250)
+            fig3.update_layout(showlegend=True, margin={"l": 20, "r": 20, "t": 20, "b": 20}, height=250)
             st.plotly_chart(fig3, use_container_width=True, key="age_distribution")
 
     with colB:
@@ -215,7 +215,7 @@ def render(df, df_raw, selected_year):
             
             fig4 = px.bar(gender_year, x="Position/Level", y="Count", color="Gender", 
                           barmode="stack", color_discrete_map=gender_colors)
-            fig4.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
+            fig4.update_layout(height=250, margin={"l": 20, "r": 20, "t": 20, "b": 20})
             st.plotly_chart(fig4, use_container_width=True)
 
     with colC:
@@ -231,5 +231,5 @@ def render(df, df_raw, selected_year):
             t3.markdown(f"<div class='metric-label'>Longest Tenure</div><div class='metric-value'>{max_tenure} yrs</div>", unsafe_allow_html=True)
 
             fig5 = px.scatter(tenure, x="Tenure", y="Count", color="YearJoined", size="Count")
-            fig5.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
+            fig5.update_layout(height=250, margin={"l": 20, "r": 20, "t": 20, "b": 20})
             st.plotly_chart(fig5, use_container_width=True)

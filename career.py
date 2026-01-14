@@ -88,12 +88,12 @@ def render(df, df_raw, selected_year):
                 y="Promotion & Transfer",
                 markers=True
             )
-            fig1.update_traces(line=dict(width=3, color="#00008B"), marker=dict(size=8, color="#00008B"))
+            fig1.update_traces(line={width=3, color="#00008B"}, marker={size=8, color="#00008B"})
             fig1.update_layout(
-                height=250, margin=dict(l=20, r=20, t=20, b=20),
-                yaxis=dict(title="Count", tickfont=dict(color="var(--text-color)"), titlefont=dict(color="var(--text-color)")),
-                xaxis=dict(title="Year", tickfont=dict(color="var(--text-color)"), titlefont=dict(color="var(--text-color)")),
-                font=dict(color="var(--text-color)")
+                height=250, margin={"l": 20, "r": 20, "t": 20, "b": 20},
+                yaxis=dict(title="Count", tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
+                xaxis=dict(title="Year", tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
+                font={"color": "var(--text-color)"}
             )
             st.plotly_chart(fig1, use_container_width=True)
 
@@ -108,11 +108,11 @@ def render(df, df_raw, selected_year):
                 color_discrete_map={"Associate": "#6495ED", "Manager & Up": "#00008B"}
             )
             fig2.update_layout(
-                height=250, margin=dict(l=20, r=20, t=20, b=20),
-                yaxis=dict(title="Count", tickfont=dict(color="var(--text-color)"), titlefont=dict(color="var(--text-color)")),
-                xaxis=dict(title="Year", tickfont=dict(color="var(--text-color)"), titlefont=dict(color="var(--text-color)")),
-                font=dict(color="var(--text-color)"),
-                legend=dict(font=dict(color="var(--text-color)"))
+                height=250, margin={"l": 20, "r": 20, "t": 20, "b": 20},
+                yaxis=dict(title="Count", tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
+                xaxis=dict(title="Year", tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
+                font={"color": "var(--text-color)"},
+                legend={font={"color": "var(--text-color}"})
             )
             st.plotly_chart(fig2, use_container_width=True)
 
@@ -134,10 +134,10 @@ def render(df, df_raw, selected_year):
                 textposition="outside"
             )
             fig3.update_layout(
-                height=250, margin=dict(l=20, r=20, t=20, b=20),
-                yaxis=dict(title="Count", tickfont=dict(color="var(--text-color)"), titlefont=dict(color="var(--text-color)")),
-                xaxis=dict(title="Tenure (years)", tickfont=dict(color="var(--text-color)"), titlefont=dict(color="var(--text-color)")),
-                font=dict(color="var(--text-color)"),
+                height=250, margin={"l": 20, "r": 20, "t": 20, "b": 20},
+                yaxis=dict(title="Count", tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
+                xaxis=dict(title="Tenure (years)", tickfont={"color": "var(--text-color)"}, titlefont={"color": "var(--text-color)"}),
+                font={"color": "var(--text-color)"},
                 showlegend=False
             )
             st.plotly_chart(fig3, use_container_width=True)
