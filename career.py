@@ -68,6 +68,8 @@ def render(df, df_raw, selected_year):
             st.markdown("<div class='metric-label'>Promotion Rate</div>", unsafe_allow_html=True)
             st.markdown(f"<div class='metric-value'>{promotion_rate:.1f}%</div>", unsafe_allow_html=True)
 
+    st.markdown("<style>h2 { margin-bottom: -0.5rem !important; } </style>", unsafe_allow_html=True)
+
     # Promotion & Transfer Tracking
     with st.container(border=True):
         st.markdown("#### Promotion & Transfer Tracking") 

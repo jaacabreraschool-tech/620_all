@@ -74,6 +74,8 @@ def render(df, df_raw, selected_year):
         with st.container(border=True):
             st.markdown(f"<div class='metric-label'>Leavers</div><div class='metric-value'>{leaver_count:,}</div>", unsafe_allow_html=True)
 
+    st.markdown("<style>h2 { margin-bottom: -0.5rem !important; } </style>", unsafe_allow_html=True)
+
     # -----------------------------
     # Normalize values for charts
     # -----------------------------

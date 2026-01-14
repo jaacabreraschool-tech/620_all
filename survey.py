@@ -135,6 +135,8 @@ def render(df, df_raw, selected_year):
             st.markdown("<div class='metric-label'>Survey Participation Rate</div>", unsafe_allow_html=True)
             st.markdown(f"<div class='metric-value'>{participation_rate:.1f}%</div>", unsafe_allow_html=True)
 
+    st.markdown("<style>h2 { margin-bottom: -0.5rem !important; } </style>", unsafe_allow_html=True)
+
     # -----------------------------
     # Prepare data for stacked chart
     # -----------------------------

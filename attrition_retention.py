@@ -117,6 +117,8 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
             st.markdown("<div class='metric-label'>Net Change</div>", unsafe_allow_html=True)
             st.markdown(f"<div class='metric-value'>{net_change_to_show}</div>", unsafe_allow_html=True)
 
+    st.markdown("<style>h2 { margin-bottom: -0.5rem !important; } </style>", unsafe_allow_html=True)
+
     # -----------------------------
     # Row 1: Resigned per Year
     # -----------------------------
