@@ -123,15 +123,22 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
     with st.container(border=True):
         st.markdown("#### Resigned per Year")
         resigned_per_year = df_raw.groupby("Year")["ResignedFlag"].sum().reset_index(name="Resigned")
-        fig_resigned = px.bar(resigned_per_year, x="Year", y="Resigned", text="Resigned",
+        
+        # Ensure all years 2020-2025 are included
+        all_years = pd.DataFrame({"Year": range(2020, 2026)})
+        resigned_per_year = all_years.merge(resigned_per_year, on="Year", how="left").fillna(0)
+        resigned_per_year["Resigned"] = resigned_per_year["Resigned"].astype(int)
+        resigned_per_year["Year_str"] = resigned_per_year["Year"].astype(str)
+        
+        fig_resigned = px.bar(resigned_per_year, x="Year_str", y="Resigned",
                               color_discrete_sequence=["#00008B"])
-        fig_resigned.update_traces(textposition='outside')
+        fig_resigned.update_traces(textposition='outside', texttemplate='%{y:.0f}', 
+                                   textfont={"size": 14, "color": "black"})
+        fig_resigned.update_xaxes(title_text="Year")
+        fig_resigned.update_yaxes(title_text="Number of Resignations", range=[0, max(resigned_per_year["Resigned"]) * 1.15])
         fig_resigned.update_layout(
-            height=220,
-            margin={"l": 20, "r": 20, "t": 20, "b": 20},
-            xaxis_title="",
-            yaxis_title="",
-            yaxis_showticklabels=False,
+            height=280,
+            margin={"l": 20, "r": 20, "t": 20, "b": 40},
             showlegend=False
         )
         st.plotly_chart(fig_resigned, use_container_width=True, key="resigned_per_year")
@@ -173,8 +180,9 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
                 },
                 xaxis={"title": "Year"},
                 barmode="group",
-                height=220,
-                margin={"l": 60, "r": 60, "t": 20, "b": 20}
+                height=280,
+                margin={"l": 60, "r": 60, "t": 20, "b": 60},
+                legend={"x": 0.5, "y": -0.25, "xanchor": "center", "yanchor": "top", "orientation": "h"}
             )
             st.plotly_chart(fig, use_container_width=True, key="retention_by_gender")
 
@@ -211,12 +219,13 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
                                    color_discrete_map=generation_colors,
                                    category_orders={"Generation": generation_order})
             fig_retention.update_layout(
-                height=220,
-                margin={"l": 20, "r": 20, "t": 20, "b": 20},
+                height=280,
+                margin={"l": 20, "r": 20, "t": 20, "b": 60},
                 yaxis={"title": "Retention Rate (%)"},
                 xaxis={"title": "Year"},
                 uniformtext_minsize=10,
-                uniformtext_mode="hide"
+                uniformtext_mode="hide",
+                legend={"x": 0.5, "y": -0.25, "xanchor": "center", "yanchor": "top", "orientation": "h"}
             )
             st.plotly_chart(fig_retention, use_container_width=True, key="retention_by_generation")
 

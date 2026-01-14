@@ -92,8 +92,8 @@ def render(df, df_raw, selected_year):
             fig1.update_layout(
                 height=250,
                 margin={"l": 20, "r": 20, "t": 20, "b": 20},
-                xaxis_title="",
-                yaxis_title=""
+                xaxis_title="Year",
+                yaxis_title="Count"
             )
             st.plotly_chart(fig1, use_container_width=True)
 

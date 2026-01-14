@@ -265,7 +265,7 @@ def render(df, df_raw, selected_year):
                 height=300,
                 margin={"l": 20, "r": 20, "t": 20, "b": 20},
                 xaxis={"title": "Importance (%)"},
-                yaxis={"title": ""},
+                yaxis={"title": "Driver"},
                 showlegend=False
             )
             
@@ -286,8 +286,8 @@ def render(df, df_raw, selected_year):
             fig_corr.update_layout(
                 height=300,
                 margin={"l": 20, "r": 20, "t": 20, "b": 20},
-                xaxis={"title": "Correlation"},
-                yaxis={"title": ""}
+                xaxis={"title": "Correlation Coefficient"},
+                yaxis={"title": "Driver"}
             )
             
             st.plotly_chart(fig_corr, use_container_width=True)
@@ -360,7 +360,7 @@ def render(df, df_raw, selected_year):
                 height=300,
                 margin={"l": 20, "r": 20, "t": 20, "b": 20},
                 xaxis={"title": "Importance (%)"},
-                yaxis={"title": ""},
+                yaxis={"title": "Driver"},
                 showlegend=False
             )
             
@@ -381,8 +381,8 @@ def render(df, df_raw, selected_year):
             fig_corr_promo.update_layout(
                 height=300,
                 margin={"l": 20, "r": 20, "t": 20, "b": 20},
-                xaxis={"title": "Correlation"},
-                yaxis={"title": ""}
+                xaxis={"title": "Correlation Coefficient"},
+                yaxis={"title": "Driver"}
             )
             
             st.plotly_chart(fig_corr_promo, use_container_width=True)
