@@ -246,7 +246,7 @@ def render(df, df_raw, selected_year):
         with col1:
             col1_inner_left, col1_inner_center, col1_inner_right = st.columns([0.2, 0.6, 0.2])
             with col1_inner_center:
-                display_profile_photo("/Users/jaacabrera/Documents/Python Scripts/data_io/HR Dashboard 01122025/angelie.jpg", width=150)
+                display_profile_photo("angelie.jpg", width=150)
             st.write("")  # Spacing
             st.markdown("""**Angelie D. Agustin**""")
             st.markdown("""
@@ -267,7 +267,7 @@ def render(df, df_raw, selected_year):
         with col2:
             col2_inner_left, col2_inner_center, col2_inner_right = st.columns([0.2, 0.6, 0.2])
             with col2_inner_center:
-                display_profile_photo("/Users/jaacabrera/Documents/Python Scripts/data_io/HR Dashboard 01122025/catherine.jpg", width=150)
+                display_profile_photo("catherine.jpg", width=150)
             st.write("")  # Spacing
             st.markdown("""**Ma. Catherine Pacheco**""")
             st.markdown("""
@@ -284,7 +284,7 @@ def render(df, df_raw, selected_year):
         with col3:
             col3_inner_left, col3_inner_center, col3_inner_right = st.columns([0.2, 0.6, 0.2])
             with col3_inner_center:
-                display_profile_photo("/Users/jaacabrera/Documents/Python Scripts/data_io/HR Dashboard 01122025/juliana.jpg", width=150)
+                display_profile_photo("juliana.jpg", width=150)
             st.write("")  # Spacing
             st.markdown("""**Juliana Amparo A. Cabrera**""")
             st.markdown("""
