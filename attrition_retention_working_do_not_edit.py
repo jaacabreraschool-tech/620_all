@@ -1,0 +1,477 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+
+def update_month_selection():
+    if "All" in st.session_state.resigned_month_dropdown:
+        if len(st.session_state.resigned_month_dropdown) > 1:
+            st.session_state.resigned_month_dropdown = ["All"]
+
+def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleaned Data 01.09.26.xlsx"):
+
+    # -----------------------------
+    # Executive Summary at the very top
+    # -----------------------------
+    with st.container(border=True):
+        st.markdown("### 📋 Executive Summary")
+        
+        summary_col1, summary_col2 = st.columns(2)
+        
+        with summary_col1:
+            st.markdown("""
+            - 🔒 **Strong Retention**: 91% retention rate demonstrates workforce stability and satisfaction
+            - 📉 **Low Attrition**: Consistent 9% attrition rate, well below industry benchmarks
+            - 👥 **Gender Parity**: Both females and males show equal retention patterns (~91%)
+            """)
+        
+        with summary_col2:
+            st.markdown("""
+            - 📊 **Net Growth**: +480 employees gained (2020-2025) despite natural turnover
+            - 🚪 **Voluntary Focus**: 70% voluntary exits vs 30% involuntary, indicating healthy workplace culture
+            - 🧠 **Generational Stability**: Millennials lead retention, Gen Z improving year-over-year
+            """)
+
+    # -----------------------------
+    # Section heading (now below Executive Summary)
+    # -----------------------------
+    st.markdown("## 🔄 Attrition and Retention Metrics")
+
+    # !!! REMOVE ANY OTHER DUPLICATE RADIO BUTTONS BELOW THIS LINE !!!
+    # -----------------------------
+    # Ensure Retention column exists
+    # -----------------------------
+    def to_resigned_flag(x):
+        s = str(x).strip().upper()
+        return 0 if s == "ACTIVE" else 1
+
+    if "ResignedFlag" not in df_raw.columns:
+        df_raw["ResignedFlag"] = df_raw["Resignee Checking"].apply(to_resigned_flag)
+    if "Retention" not in df_raw.columns:
+        df_raw["Retention"] = 1 - df_raw["ResignedFlag"]
+
+    # Normalize values
+    df_raw["Gender"] = df_raw["Gender"].str.strip().str.capitalize()
+    df_raw["Resignee Checking"] = df_raw["Resignee Checking"].str.strip().str.upper()
+
+    # Convert Calendar Year to datetime and extract year
+    if "Calendar Year" in df_raw.columns:
+        df_raw["Calendar Year"] = pd.to_datetime(df_raw["Calendar Year"], errors='coerce')
+    
+    # Create Year column from Calendar Year
+    if "Year" not in df_raw.columns and "Calendar Year" in df_raw.columns:
+        df_raw["Year"] = df_raw["Calendar Year"].dt.year
+
+    # -----------------------------
+    # Row 0: Summary Metrics (Net Change fixed to use Summary tab col H)
+    # -----------------------------
+    if selected_year == "All":
+        summary_year = df_raw[df_raw["Year"].between(2020, 2025)]
+    else:
+        summary_year = df_raw[df_raw["Year"] == selected_year]
+
+    total_employees = len(summary_year)
+    resigned = summary_year["ResignedFlag"].sum()
+    retained = summary_year["Retention"].sum()
+
+    retention_rate = (retained / total_employees) * 100 if total_employees > 0 else 0
+    attrition_rate = (resigned / total_employees) * 100 if total_employees > 0 else 0
+
+    # Load official Net Change from Summary tab (Column H)
+    net_change_to_show = 0  # default
+    try:
+        summary_df = pd.read_excel(summary_file, sheet_name="Summary")
+        summary_df.columns = summary_df.columns.str.strip()
+        
+        if "Year" in summary_df.columns and "Net Change" in summary_df.columns:
+            # Convert Year to integer, handling both datetime and numeric formats
+            if pd.api.types.is_datetime64_any_dtype(summary_df["Year"]):
+                summary_df["Year"] = summary_df["Year"].dt.year
+            else:
+                summary_df["Year"] = pd.to_numeric(summary_df["Year"], errors="coerce")
+            
+            summary_df["Year"] = summary_df["Year"].astype(int)
+            summary_df["Net Change"] = pd.to_numeric(summary_df["Net Change"], errors="coerce").fillna(0).astype(int)
+            
+            # Create lookup dictionary
+            year_to_net = summary_df.set_index("Year")["Net Change"].to_dict()
+            
+            if selected_year == "All":
+                net_change_to_show = sum([year_to_net.get(y, 0) for y in range(2020, 2026)])
+            elif selected_year in year_to_net:
+                net_change_to_show = year_to_net[selected_year]
+    except Exception as e:
+        st.warning(f"Could not load Net Change from Summary sheet: {str(e)}")
+        net_change_to_show = 0
+
+    colA, colB, colC, colD, colE = st.columns(5)
+    
+    with colA:
+        with st.container(border=True):
+            st.markdown("<div class='metric-label'>Total Employees</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='metric-value'>{total_employees}</div>", unsafe_allow_html=True)
+    
+    with colB:
+        with st.container(border=True):
+            st.markdown("<div class='metric-label'>Resigned</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='metric-value'>{resigned}</div>", unsafe_allow_html=True)
+    
+    with colC:
+        with st.container(border=True):
+            st.markdown("<div class='metric-label'>Retention Rate</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='metric-value'>{retention_rate:.1f}%</div>", unsafe_allow_html=True)
+    
+    with colD:
+        with st.container(border=True):
+            st.markdown("<div class='metric-label'>Attrition Rate</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='metric-value'>{attrition_rate:.1f}%</div>", unsafe_allow_html=True)
+    
+    with colE:
+        with st.container(border=True):
+            st.markdown("<div class='metric-label'>Net Change</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='metric-value'>{net_change_to_show}</div>", unsafe_allow_html=True)
+
+    st.markdown("<style>h2 { margin-bottom: -0.5rem !important; } </style>", unsafe_allow_html=True)
+
+    # -----------------------------
+    # Row 1: Resigned per Year
+    # -----------------------------
+    with st.container(border=True):   # Create a bordered container for the chart
+        st.markdown("#### Resigned per Year")   # Section heading
+
+        # Add month dropdown in a small column
+        month_order = [
+            "All", "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ]
+        # Initialize session state for month selection
+        if "resigned_month_dropdown" not in st.session_state:
+            st.session_state.resigned_month_dropdown = ["All"]
+        # Style the multiselect tags and input to be blue
+        st.markdown("""
+        <style>
+        [data-baseweb="tag"] {
+            background-color: #00008B !important;
+            color: white !important;
+        }
+        .st-ce input {
+            background-color: #00008B !important;
+            color: white !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        dropdown_col, _ = st.columns([1, 5])
+        with dropdown_col:
+            selected_month = st.multiselect("Select Month", month_order, key="resigned_month_dropdown", on_change=update_month_selection)
+
+        # Prepare month column
+        # Try both explicit and flexible parsing for Resignation Date
+        df_raw["Month"] = pd.to_datetime(
+            df_raw["Resignation Date"], errors='coerce', infer_datetime_format=True
+        ).dt.month_name()
+
+        # Group raw data by Year and sum resignations, optionally filter by month
+        if "All" in selected_month or not selected_month:
+            filtered_df = df_raw
+        else:
+            filtered_df = df_raw[df_raw["Month"].isin(selected_month)]
+
+        resigned_per_year = filtered_df.groupby("Year")["ResignedFlag"].sum().reset_index(name="Resigned")
+
+        # Ensure all years 2020–2025 are included, even if no resignations
+        all_years = pd.DataFrame({"Year": range(2020, 2026)})
+        resigned_per_year = all_years.merge(resigned_per_year, on="Year", how="left").fillna(0)
+
+        # Clean up datatypes
+        resigned_per_year["Resigned"] = resigned_per_year["Resigned"].astype(int)
+        resigned_per_year["Year"] = resigned_per_year["Year"].astype(int)
+        resigned_per_year["Year_str"] = resigned_per_year["Year"].astype(str)   # string version for categorical x-axis
+
+        # Handle radio button selection
+        if selected_year == "All":
+            plot_data = resigned_per_year
+            color_seq = ["#00008B"]
+        else:
+            plot_data = resigned_per_year[resigned_per_year["Year"] == selected_year]
+            color_seq = ["#00008B"]
+
+        fig_resigned = px.bar(
+            plot_data,
+            x="Year_str",
+            y="Resigned",
+            color_discrete_sequence=color_seq
+        )
+        fig_resigned.update_traces(
+            textposition="outside",
+            texttemplate="%{y:.0f}",   # show integer values above bars
+            textfont={"size": 14, "color": "black"}
+        )
+        fig_resigned.update_xaxes(type="category", title_text="Year")   # force categorical axis
+        fig_resigned.update_yaxes(
+            title_text="Number of Resignations",
+            range=[0, max(plot_data["Resigned"]) * 1.15 if not plot_data.empty else 1]   # add headroom above tallest bar
+        )
+        fig_resigned.update_layout(
+            height=280,
+            margin={"l": 20, "r": 20, "t": 20, "b": 40},
+            showlegend=False
+        )
+
+        # Render chart in Streamlit
+        st.plotly_chart(fig_resigned, use_container_width=True, key=f"resigned_per_year_{selected_year}_{selected_month}")
+
+
+    # -----------------------------
+    # Row 2: Retention by Gender + Retention by Generation
+    # -----------------------------
+    col1, col2 = st.columns(2)
+
+    with col1:
+        with st.container(border=True):
+            st.markdown("#### Retention by Gender")
+            # Remove the year selector for this chart
+            if selected_year == "All":
+                retention_gender = df_raw[df_raw["Year"].between(2020, 2025)].groupby(["Year", "Gender"])["Retention"].sum().reset_index()
+                retention_rate_df = df_raw[df_raw["Year"].between(2020, 2025)].groupby("Year")["Retention"].mean().reset_index()
+            else:
+                retention_gender = df_raw[df_raw["Year"] == selected_year].groupby(["Year", "Gender"])["Retention"].sum().reset_index()
+                retention_rate_df = df_raw[df_raw["Year"] == selected_year].groupby("Year")["Retention"].mean().reset_index()
+            retention_rate_df["RetentionRatePct"] = retention_rate_df["Retention"] * 100
+
+            gender_colors = {"Female": "#6495ED", "Male": "#00008B"}
+
+            if retention_gender.empty:
+                st.warning(f"No retention data available for {selected_year}")
+            else:
+                # Convert Year to string for categorical x-axis
+                retention_gender["Year_str"] = retention_gender["Year"].astype(str)
+                retention_rate_df["Year_str"] = retention_rate_df["Year"].astype(str)
+                fig = go.Figure()
+                for gender in retention_gender["Gender"].unique():
+                    subset = retention_gender[retention_gender["Gender"] == gender]
+                    color = gender_colors.get(gender, "#00008B")
+                    fig.add_bar(x=subset["Year_str"], y=subset["Retention"], name=gender,
+                                marker_color=color, yaxis="y1")
+                fig.add_trace(go.Scatter(x=retention_rate_df["Year_str"], y=retention_rate_df["RetentionRatePct"],
+                                         mode="lines+markers", name="Retention Rate (%)",
+                                         line={"color": "orange", "width": 3}, yaxis="y2"))
+                fig.update_layout(
+                    yaxis={
+                        "title": "Retained Employees (count)",
+                        "side": "left"
+                    },
+                    yaxis2={
+                        "title": "Retention Rate (%)",
+                        "overlaying": "y",
+                        "side": "right",
+                        "range": [80, 100]
+                    },
+                    xaxis={
+                        "title": "Year",
+                        "type": "category",  # Force categorical axis
+                        "tickmode": "array",
+                        "tickvals": retention_gender["Year_str"].unique(),
+                        "ticktext": retention_gender["Year_str"].unique()
+                    },
+                    barmode="group",
+                    height=280,
+                    margin={"l": 60, "r": 60, "t": 20, "b": 60},
+                    legend={"x": 0.5, "y": -0.25, "xanchor": "center", "yanchor": "top", "orientation": "h"}
+                )
+                st.plotly_chart(fig, use_container_width=True, key="retention_by_gender")
+
+    with col2:
+        with st.container(border=True):
+            st.markdown("#### Retention by Generation")
+            # Remove the year selector for this chart
+            active_df = df_raw[df_raw["Resignee Checking"] == "ACTIVE"]
+            
+            # Normalize Generation values
+            df_raw["Generation"] = df_raw["Generation"].str.strip().str.title()
+            
+            if selected_year == "All":
+                total_by_year_gen = df_raw[df_raw["Year"].between(2020, 2025)].groupby(["Year", "Generation"]).size().reset_index(name="Total")
+                active_by_year_gen = active_df[active_df["Year"].between(2020, 2025)].groupby(["Year", "Generation"]).size().reset_index(name="Active")
+            else:
+                total_by_year_gen = df_raw[df_raw["Year"] == selected_year].groupby(["Year", "Generation"]).size().reset_index(name="Total")
+                active_by_year_gen = active_df[active_df["Year"] == selected_year].groupby(["Year", "Generation"]).size().reset_index(name="Active")
+            retention_df = pd.merge(total_by_year_gen, active_by_year_gen, on=["Year", "Generation"], how="left")
+            retention_df["RetentionRate"] = (retention_df["Active"] / retention_df["Total"]) * 100
+            
+            # Define generation order (alphabetical)
+            generation_order = ["Baby Boomer", "Gen X", "Gen Z", "Millennial"]
+            
+            # Standardized generation colors - unique blue shades
+            generation_colors = {
+                "Gen Z": "#87CEEB",           # Sky Blue
+                "Millennial": "#4169E1",      # Royal Blue
+                "Gen X": "#1E90FF",           # Dodger Blue
+                "Baby Boomer": "#00008B",     # Dark Blue
+                "Boomer": "#00008B"           # Dark Blue (fallback)
+            }
+            
+            # Convert Generation to categorical with defined order
+            retention_df["Generation"] = pd.Categorical(retention_df["Generation"], categories=generation_order, ordered=True)
+            
+            if retention_df.empty:
+                st.warning(f"No generation data available for {selected_year}")
+            else:
+                fig_retention = px.bar(
+                    retention_df, x="Year", y="RetentionRate", color="Generation", barmode="group",
+                    text=retention_df["RetentionRate"].round(1).astype(str) + "%",
+                    color_discrete_map=generation_colors,
+                    category_orders={"Generation": generation_order}
+                )
+                fig_retention.update_layout(
+                    height=280,  # Match Retention by Gender chart height
+                    margin={"l": 20, "r": 20, "t": 20, "b": 60},
+                    yaxis={"title": "Retention Rate (%)"},
+                    xaxis={"title": "Year"},
+                    uniformtext_minsize=10,
+                    uniformtext_mode="hide",
+                    legend={"x": 0.5, "y": -0.25, "xanchor": "center", "yanchor": "top", "orientation": "h"}
+                )
+                st.plotly_chart(fig_retention, use_container_width=True, key="retention_by_generation")
+
+    # -----------------------------
+    # Row 3: Attrition Analysis
+    # -----------------------------
+    with st.container(border=True):
+        st.markdown("#### Attrition Analysis")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown(f"##### Attrition by Month ")
+            if selected_year == "All":
+                attrition_selected = df_raw[(df_raw["Year"].between(2020, 2025)) & (df_raw["ResignedFlag"] == 1)].copy()
+            else:
+                attrition_selected = df_raw[(df_raw["Year"] == selected_year) & (df_raw["ResignedFlag"] == 1)].copy()
+            
+            if attrition_selected.empty:
+                st.warning(f"No attrition data available for {selected_year}")
+            else:
+                attrition_selected["Month"] = pd.to_datetime(attrition_selected["Resignation Date"], errors='coerce').dt.month_name()
+                monthly_attrition = (
+                    attrition_selected.groupby("Month")
+                    .size()
+                    .reindex([
+                        "January", "February", "March", "April", "May", "June",
+                        "July", "August", "September", "October", "November", "December"
+                    ])
+                    .reset_index(name="AttritionCount")
+                )
+                fig_monthly = px.bar(
+                    monthly_attrition, x="Month", y="AttritionCount", text="AttritionCount",
+                    color_discrete_sequence=["#00008B"]
+                )
+                fig_monthly.update_layout(
+                    height=300,
+                    margin={"l": 20, "r": 20, "t": 20, "b": 20},
+                    yaxis={"title": "Attrition Count"},
+                    xaxis={"title": "Month"},
+                    uniformtext_minsize=10,
+                    uniformtext_mode="hide",
+                    showlegend=False
+                )
+                st.plotly_chart(fig_monthly, use_container_width=True, key="attrition_by_month")
+
+        with col2:
+            st.markdown(f"##### Attrition by Voluntary vs Involuntary")
+            if df_attrition is not None:
+                # Convert Calendar Year to datetime and extract year
+                if "Calendar Year" in df_attrition.columns:
+                    df_attrition["Calendar Year"] = pd.to_datetime(df_attrition["Calendar Year"], errors='coerce')
+                
+                if "Year" not in df_attrition.columns and "Calendar Year" in df_attrition.columns:
+                    df_attrition["Year"] = df_attrition["Calendar Year"].dt.year
+                
+                # Filter for selected year only
+                if selected_year == "All":
+                    attrition_df = df_attrition[
+                        (df_attrition["Year"].between(2020, 2025)) &
+                        (df_attrition["Status"].isin(["Voluntary", "Involuntary"]))
+                    ]
+                else:
+                    attrition_df = df_attrition[
+                        (df_attrition["Year"] == selected_year) &
+                        (df_attrition["Status"].isin(["Voluntary", "Involuntary"]))
+                    ]
+                
+                if attrition_df.empty:
+                    st.warning(f"No voluntary/involuntary attrition data available for {selected_year}")
+                else:
+                    attrition_counts = attrition_df.groupby(["Status"]).size().reset_index(name="Count")
+                    
+                    fig_attrition = px.bar(
+                        attrition_counts, x="Status", y="Count", color="Status", barmode="group", text="Count",
+                        color_discrete_map={"Voluntary": "#6495ED", "Involuntary": "#00008B"}
+                    )
+                    fig_attrition.update_layout(
+                        height=300,
+                        margin={"l": 20, "r": 20, "t": 20, "b": 20},
+                        yaxis={"title": "Attrition Count"},
+                        xaxis={"title": "Status"},
+                        uniformtext_minsize=10,
+                        uniformtext_mode="hide"
+                    )
+                    st.plotly_chart(fig_attrition, use_container_width=True, key="attrition_by_type")
+            else:
+                st.info("No Voluntary/Involuntary attrition dataset provided yet.")
+
+    # -----------------------------
+    # Row 4: Net Talent Gain/Loss (already uses Summary tab Net Change)
+    # -----------------------------
+    with st.container(border=True):
+        st.markdown("#### Net Talent Gain/Loss")
+
+        summary_df_row4 = pd.read_excel(summary_file, sheet_name="Summary")
+        
+        # Convert Year in summary to integer
+        if pd.api.types.is_datetime64_any_dtype(summary_df_row4["Year"]):
+            summary_df_row4["Year"] = summary_df_row4["Year"].dt.year
+        else:
+            summary_df_row4["Year"] = pd.to_numeric(summary_df_row4["Year"], errors="coerce").astype(int)
+        
+        net_df = summary_df_row4[["Year", "Joins", "Resignations", "Net Change"]].copy()
+        net_df.rename(columns={"Net Change": "NetChange"}, inplace=True)
+        net_df["Status"] = net_df["NetChange"].apply(lambda x: "Increase" if x > 0 else "Decrease")
+        net_df["Status"] = pd.Categorical(net_df["Status"], categories=["Increase", "Decrease"], ordered=True)
+        net_df["YearStr"] = net_df["Year"].astype(str)
+        # Filter for selected year(s)
+        if selected_year == "All":
+            net_df = net_df[net_df["Year"].between(2020, 2025)]
+        else:
+            net_df = net_df[net_df["Year"] == selected_year]
+        color_map = {"Increase": "#2E8B57", "Decrease": "#B22222"}
+        fig_net = px.bar(
+            net_df, x="YearStr", y="NetChange",
+            text=net_df["NetChange"].apply(lambda x: f"{x:+d}"),
+            color="Status", color_discrete_map=color_map,
+            hover_data={"Joins": True, "Resignations": True, "NetChange": True, "Status": True, "Year": True}
+        )
+        fig_net.update_layout(
+            height=320,
+            margin={"l": 20, "r": 20, "t": 20, "b": 20},
+            yaxis={"title": "Net Change"},
+            xaxis={
+                "title": "Year",
+                "type": "category",  # Force categorical axis to avoid fractional ticks
+                "tickmode": "array",
+                "tickvals": net_df["YearStr"].tolist(),
+                "ticktext": net_df["YearStr"].tolist()
+            },
+            uniformtext_minsize=10,
+            uniformtext_mode="hide"
+        )
+        st.plotly_chart(fig_net, use_container_width=True, key="net_talent_change")
+
+if __name__ == "__main__":
+    # Load data for standalone run
+    df = pd.read_excel("HR_Analysis_Output.xlsx", sheet_name=None)
+    df_raw = pd.read_excel("HR Cleaned Data 01.09.26.xlsx", sheet_name="Data")
+    df_attrition = pd.read_excel("Attrition-Vol and Invol.xlsx")
+    # Default year for standalone
+    selected_year = 2024
+    # Do NOT call st.radio here or anywhere else except inside render()
+    render(df, df_raw, selected_year, df_attrition)

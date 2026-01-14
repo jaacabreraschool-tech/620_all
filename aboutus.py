@@ -312,7 +312,7 @@ def render(df, df_raw, selected_year):
     # -----------------------------
     with st.container(border=True):
         st.markdown("### 📧 Contact Information & Resources")
-        st.markdown("**GitHub**: https://github.com/jaacabreraschool-tech/MBAN614_1/blob/main/workforce.py")
+        st.markdown("**GitHub**: https://github.com/jaacabreraschool-tech/MBAN620")
         st.markdown("We welcome feedback to improve this dashboard. **Submit via**: Email above")
     
     # -----------------------------

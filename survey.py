@@ -53,8 +53,12 @@ def render(df, df_raw, selected_year):
     # -----------------------------
     # Filter by selected year
     # -----------------------------
-    engagement_year = df_engagement[df_engagement["Year"] == int(selected_year)]
-    participation_year = df_participation[df_participation["Year"] == int(selected_year)]
+    if selected_year == "All":
+        engagement_year = df_engagement.copy()
+        participation_year = df_participation.copy()
+    else:
+        engagement_year = df_engagement[df_engagement["Year"] == int(selected_year)]
+        participation_year = df_participation[df_participation["Year"] == int(selected_year)]
 
     # -----------------------------
     # Calculate engagement metrics
@@ -84,17 +88,20 @@ def render(df, df_raw, selected_year):
         needs_improvement_count = len(engagement_year_copy[engagement_year_copy["Score"] < 60])
         
         # YoY Change (if previous year data exists)
-        previous_year = int(selected_year) - 1
-        engagement_previous = df_engagement[df_engagement["Year"] == previous_year]
-        
-        if not engagement_previous.empty:
-            prev_outstanding = engagement_previous["Outstanding"].mean() * 100
-            prev_average = engagement_previous["Average"].mean() * 100
-            prev_needs_improvement = engagement_previous["Needs Improvement"].mean() * 100
-            prev_engagement_score = (prev_outstanding + (prev_average * 0.5)) / (prev_outstanding + prev_average + prev_needs_improvement) * 100
-            yoy_change = avg_engagement_score - prev_engagement_score
-        else:
+        if selected_year == "All":
             yoy_change = 0
+        else:
+            previous_year = int(selected_year) - 1
+            engagement_previous = df_engagement[df_engagement["Year"] == previous_year]
+
+            if not engagement_previous.empty:
+                prev_outstanding = engagement_previous["Outstanding"].mean() * 100
+                prev_average = engagement_previous["Average"].mean() * 100
+                prev_needs_improvement = engagement_previous["Needs Improvement"].mean() * 100
+                prev_engagement_score = (prev_outstanding + (prev_average * 0.5)) / (prev_outstanding + prev_average + prev_needs_improvement) * 100
+                yoy_change = avg_engagement_score - prev_engagement_score
+            else:
+                yoy_change = 0
     else:
         avg_engagement_score = 0
         top_dimension_name = "N/A"
@@ -147,7 +154,11 @@ def render(df, df_raw, selected_year):
         value_name="Score"
     )
     df_long["Score %"] = df_long["Score"] * 100
-    df_long_year = df_long[df_long["Year"] == int(selected_year)]
+    if selected_year == "All":
+        # Aggregate across all years
+        df_long_year = df_long.groupby(["Dimensions", "Rating Type"])["Score %"].mean().reset_index()
+    else:
+        df_long_year = df_long[df_long["Year"] == int(selected_year)]
 
     pivot_df = df_long_year.pivot(index="Dimensions", columns="Rating Type", values="Score %").fillna(0)
 
@@ -155,7 +166,7 @@ def render(df, df_raw, selected_year):
     # Stacked Bar Chart
     # -----------------------------
     with st.container(border=True):
-        st.markdown(f"#### Engagement Ratings Breakdown ({selected_year})")
+        st.markdown(f"#### Engagement Ratings Breakdown")
 
         # Updated color palette: Outstanding=Green, Average=Gray, Needs Improvement=Red
         rating_colors = {
@@ -211,9 +222,10 @@ def render(df, df_raw, selected_year):
             
             # Prepare data
             df_analysis = df_raw.copy()
-            
+
             # Add year filtering
-            df_analysis = df_analysis[df_analysis["Year"] == int(selected_year)]
+            if selected_year != "All":
+                df_analysis = df_analysis[df_analysis["Year"] == int(selected_year)]
             
             # Create binary resignation flag
             df_analysis["Resigned"] = df_analysis["Resignee Checking"].apply(
@@ -250,7 +262,7 @@ def render(df, df_raw, selected_year):
             importance_df["Importance %"] = (importance_df["Importance"] * 100).round(1)
             
             # Display metrics with year
-            st.markdown(f"<div class='metric-label'>Top Driver ({selected_year}): {importance_df.iloc[0]['Driver']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='metric-label'>Top Driver: {importance_df.iloc[0]['Driver']}</div>", unsafe_allow_html=True)
             st.markdown(f"<div class='metric-value'>{importance_df.iloc[0]['Importance %']}%</div>", unsafe_allow_html=True)
             
             # Driver Importance Chart
@@ -302,9 +314,10 @@ def render(df, df_raw, selected_year):
             
             # Prepare data for promotion analysis
             df_promo = df_raw[df_raw["Resignee Checking"].str.strip().str.upper() == "ACTIVE"].copy()
-            
+
             # Add year filtering
-            df_promo = df_promo[df_promo["Year"] == int(selected_year)]
+            if selected_year != "All":
+                df_promo = df_promo[df_promo["Year"] == int(selected_year)]
             
             # Create binary promotion flag
             def to_promo_flag(x):
@@ -345,7 +358,7 @@ def render(df, df_raw, selected_year):
             importance_promo_df["Importance %"] = (importance_promo_df["Importance"] * 100).round(1)
             
             # Display metrics with year
-            st.markdown(f"<div class='metric-label'>Top Driver ({selected_year}): {importance_promo_df.iloc[0]['Driver']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='metric-label'>Top Driver: {importance_promo_df.iloc[0]['Driver']}</div>", unsafe_allow_html=True)
             st.markdown(f"<div class='metric-value'>{importance_promo_df.iloc[0]['Importance %']}%</div>", unsafe_allow_html=True)
             
             # Driver Importance Chart

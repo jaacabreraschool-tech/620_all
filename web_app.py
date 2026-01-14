@@ -51,6 +51,12 @@ if "Year" not in df_attrition.columns and "Calendar Year" in df_attrition.column
 st.title("ACJ Company Dashboard")
 
 # -----------------------------
+# Global Year Selector
+# -----------------------------
+year_options = ["All"] + list(range(2020, 2026))
+selected_year = st.radio("Select Year", year_options, index=year_options.index(2024) if 2024 in year_options else 0, horizontal=True)
+
+# -----------------------------
 # Initialize session state for active tab
 # -----------------------------
 if "active_tab" not in st.session_state:
@@ -128,24 +134,16 @@ st.markdown("---")
 active_tab = st.session_state.active_tab
 
 if active_tab == 0:  # Workforce
-    years = [2020, 2021, 2022, 2023, 2024, 2025]
-    selected_year = st.radio("Select Year", years, horizontal=True, key="workforce_year")
     workforce.render(df, df_raw, selected_year)
 
 elif active_tab == 1:  # Attrition & Retention
-    years = [2020, 2021, 2022, 2023, 2024, 2025]
-    selected_year = st.radio("Select Year", years, horizontal=True, key="attrition_year")
     attrition.render(df, df_raw, selected_year, df_attrition)
 
 elif active_tab == 2:  # Career Progression
-    years = [2020, 2021, 2022, 2023, 2024, 2025]
-    selected_year = st.radio("Select Year", years, horizontal=True, key="career_year")
     career.render(df, df_raw, selected_year)
 
 elif active_tab == 3:  # Survey & Feedback
-    years = [2020, 2021, 2022, 2023, 2024, 2025]
-    selected_year = st.radio("Select Year", years, horizontal=True, key="survey_year")
     survey.render(df, df_raw, selected_year)
 
 elif active_tab == 4:  # About Us
-    aboutus.render(df, df_raw, 2024)
+    aboutus.render(df, df_raw, selected_year)
