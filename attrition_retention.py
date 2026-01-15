@@ -138,37 +138,32 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
     # -----------------------------
     col1, col2 = st.columns(2)
 
-    # Ensure both containers have the same height (e.g., 280)
+    # Remove fixed height for all containers to avoid scrollbars
+    # fixed_container_height = 340
+
     with col1:
         with st.container(border=True):
-            st.markdown("#### Resigned")   # Section heading
-
+            # Header and dropdown in the same line
             month_order = [
                 "All", "January", "February", "March", "April", "May", "June",
                 "July", "August", "September", "October", "November", "December"
             ]
-            # Style the multiselect tags and input to be blue, but do NOT affect selectbox text
+            # Add custom CSS for blue dropdown value
             st.markdown("""
             <style>
-            [data-baseweb="tag"] {
-                background-color: #00008B !important;
+            /* Blue background for selected values in multiselect */
+            .stMultiSelect [data-baseweb="tag"] {
+                background-color: #4682B4 !important; /* steel blue */
                 color: white !important;
-            }
-            .st-ce input {
-                background-color: #00008B !important;
-                color: white !important;
-            }
-            /* Remove filter that causes selectbox text to appear blurred */
-            .stSelectbox label, .stSelectbox div[role="combobox"] {
-                filter: none !important;
-                color: #000 !important;
             }
             </style>
             """, unsafe_allow_html=True)
-
-            # Move dropdown inside the container
-            dropdown_col, _ = st.columns([1, 5])
+            header_col, dropdown_col = st.columns([2, 1])
+            with header_col:
+                st.markdown("#### Resigned")
             with dropdown_col:
+                if "resigned_month_dropdown" not in st.session_state:
+                    st.session_state.resigned_month_dropdown = ["All"]
                 selected_month = st.multiselect(
                     "Select Month", month_order, key="resigned_month_dropdown", on_change=update_month_selection
                 )
@@ -217,10 +212,14 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
                 texttemplate="%{y:.0f}",   # show integer values above bars
                 textfont={"size": 14, "color": "black"}
             )
-            fig_resigned.update_xaxes(type="category", title_text="Year")   # force categorical axis
+            fig_resigned.update_xaxes(
+                type="category",
+                title_text="Year",
+                showticklabels=False  # <-- Hide tick labels
+            )
             fig_resigned.update_yaxes(
                 title_text="Number of Resignations",
-                range=[0, max(plot_data["Resigned"]) * 1.15 if not plot_data.empty else 1]   # add headroom above tallest bar
+                range=[0, max(plot_data["Resigned"]) * 1.15 if not plot_data.empty else 1]
             )
             fig_resigned.update_layout(
                 height=280,
@@ -232,12 +231,30 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
             st.plotly_chart(fig_resigned, use_container_width=True, key=f"resigned_per_year_{selected_year}_{selected_month}")
 
     with col2:
-        with st.container(border=True, height=520):
-            # All UI elements for Retention go inside this container
-            retention_dropdown_col, _ = st.columns([1, 5])
-            with retention_dropdown_col:
+        with st.container(border=True):
+            # Add custom CSS for blue selectbox value and selected value display
+            st.markdown("""
+            <style>
+            /* Blue background for selected value in selectbox dropdown */
+            .stSelectbox [data-baseweb="select"] div[role="option"][aria-selected="true"] {
+                background-color: #4682B4 !important;
+                color: white !important;
+            }
+            /* Blue background for selected value in selectbox input */
+            .stSelectbox [data-baseweb="select"] > div {
+                background-color: #4682B4 !important;
+                color: white !important;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            header_col, dropdown_col = st.columns([2, 1])
+            with header_col:
+                # Always display the correct header based on dropdown selection
+                retention_view_val = st.session_state.get("retention_view_dropdown", "Gender")
+                st.markdown(f"#### Retention by {retention_view_val}")
+            with dropdown_col:
                 retention_view = st.selectbox("View Retention By", ["Gender", "Generation"], key="retention_view_dropdown")
-            st.markdown(f"#### Retention by {retention_view}")
+    
 
             if retention_view == "Gender":
                 # Retention by Gender
@@ -266,7 +283,7 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
                                              mode="lines+markers", name="Retention Rate (%)",
                                              line={"color": "orange", "width": 3}, yaxis="y2"))
                     fig.update_layout(
-                        height=210,  # Chart height reduced to fit inside the 280px container with dropdown/header
+                        height=260,
                         yaxis={
                             "title": "Retained Employees (count)",
                             "side": "left"
@@ -282,11 +299,18 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
                             "type": "category",
                             "tickmode": "array",
                             "tickvals": retention_gender["Year_str"].unique(),
-                            "ticktext": retention_gender["Year_str"].unique()
+                            "ticktext": retention_gender["Year_str"].unique(),
+                            "showticklabels": False  # <-- Hide tick labels
                         },
                         barmode="group",
-                        margin={"l": 60, "r": 60, "t": 20, "b": 60},
-                        legend={"x": 0.5, "y": -0.25, "xanchor": "center", "yanchor": "top", "orientation": "h"}
+                        margin={"l": 60, "r": 60, "t": 20, "b": 110},
+                        legend={
+                            "x": 0.5,
+                            "y": -0.55,
+                            "xanchor": "center",
+                            "yanchor": "top",
+                            "orientation": "h"
+                        }
                     )
                     st.plotly_chart(fig, use_container_width=True, key="retention_by_gender")
             else:
@@ -323,12 +347,21 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
                     )
                     fig_retention.update_layout(
                         height=280,
-                        margin={"l": 20, "r": 20, "t": 20, "b": 60},
+                        margin={"l": 20, "r": 20, "t": 20, "b": 110},
                         yaxis={"title": "Retention Rate (%)"},
-                        xaxis={"title": "Year"},
+                        xaxis={
+                            "title": "Year",
+                            "showticklabels": False  # <-- Hide tick labels
+                        },
                         uniformtext_minsize=10,
                         uniformtext_mode="hide",
-                        legend={"x": 0.5, "y": -0.25, "xanchor": "center", "yanchor": "top", "orientation": "h"}
+                        legend={
+                            "x": 0.5,
+                            "y": -0.55,
+                            "xanchor": "center",
+                            "yanchor": "top",
+                            "orientation": "h"
+                        }
                     )
                     st.plotly_chart(fig_retention, use_container_width=True, key="retention_by_generation")
                     st.markdown("<div style='height:1px'></div>", unsafe_allow_html=True)
@@ -342,21 +375,33 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
         if "All" in st.session_state.attrition_month_dropdown and len(st.session_state.attrition_month_dropdown) > 1:
             st.session_state.attrition_month_dropdown = ["All"]
 
+    # Set a fixed height for both containers (e.g., 370)
+    #fixed_attrition_height = 520
+
     with col1:
         with st.container(border=True):
-            month_order = [
-                "All", "January", "February", "March", "April", "May", "June",
-                "July", "August", "September", "October", "November", "December"
-            ]
-            attrition_month_col, _ = st.columns([1, 5])
+            # Header and dropdown in the same line
+            header_col, attrition_month_col = st.columns([2, 1])
+            with header_col:
+                st.markdown("#### Attrition")
             with attrition_month_col:
+                # Add custom CSS for blue dropdown value
+                st.markdown("""
+                <style>
+                .stMultiSelect [data-baseweb="tag"] {
+                    background-color: #4682B4 !important;
+                    color: white !important;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                if "attrition_month_dropdown" not in st.session_state:
+                    st.session_state.attrition_month_dropdown = ["All"]
                 selected_attrition_month = st.multiselect(
                     "Select Month", month_order, key="attrition_month_dropdown", on_change=update_attrition_month_selection
                 )
                 if not selected_attrition_month:
                     selected_attrition_month = ["All"]
 
-            st.markdown("#### Attrition by Month")
             # Filter attrition_selected by selected months, but prevent "All" and months at the same time
             if selected_year == "All":
                 attrition_selected = df_raw[(df_raw["Year"].between(2020, 2025)) & (df_raw["ResignedFlag"] == 1)].copy()

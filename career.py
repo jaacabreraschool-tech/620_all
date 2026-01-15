@@ -115,7 +115,7 @@ def render(df, df_raw, selected_year):
             fig1.update_layout(
                 height=250,
                 margin={"l": 20, "r": 20, "t": 20, "b": 20},
-                xaxis_title="",  # Remove x-axis label
+                xaxis_title="Year",  # Remove x-axis label
                 yaxis_title="Count"
             )
             fig1.update_xaxes(type="category")
@@ -137,7 +137,7 @@ def render(df, df_raw, selected_year):
                 height=250,
                 margin={"l": 20, "r": 20, "t": 20, "b": 20},
                 yaxis={"title": "Count"},
-                xaxis={"title": ""}  # Remove x-axis label
+                xaxis={"title": "Year"}  # Remove x-axis label
             )
             st.plotly_chart(fig2, use_container_width=True)
 

@@ -54,7 +54,7 @@ st.title("ACJ Company Dashboard")
 # Global Year Selector
 # -----------------------------
 year_options = ["All"] + list(range(2020, 2026))
-selected_year = st.radio("Select Year", year_options, index=year_options.index(2024) if 2024 in year_options else 0, horizontal=True)
+selected_year = st.radio("Select Year", year_options, index=0, horizontal=True)
 
 # -----------------------------
 # Initialize session state for active tab
