@@ -73,12 +73,16 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
     df_raw["Calendar Year"] = pd.to_datetime(df_raw["Calendar Year"], errors='coerce')
     if selected_year == "All":
         # All unique employees (2020-2025) minus resignations
-        active_employees = 1400  # Force update to 1400
-        total_employees = 1400
-        resigned = df_raw[
+        all_employees = df_raw[
+            (df_raw["Calendar Year"].dt.year.between(2020, 2025))
+        ].drop_duplicates(subset=["Full Name"])
+        resigned_count = df_raw[
             (df_raw["Calendar Year"].dt.year.between(2020, 2025)) &
             (~df_raw["Resignee Checking"].isin(["ACTIVE", "Active"]))
-        ].drop_duplicates(subset=["Full Name"], keep='first').shape[0]
+        ].drop_duplicates(subset=["Full Name"]).shape[0]
+        active_employees = all_employees.shape[0] - resigned_count
+        total_employees = all_employees.shape[0]
+        resigned = resigned_count
     else:
         # Total headcount for year minus resignations in that year
         all_employees = df_raw[
@@ -99,12 +103,12 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
         for year in range(2020, 2026):
             year_df = df_raw[df_raw["Calendar Year"].dt.year == year]
             total = year_df.drop_duplicates(subset=["Full Name"]).shape[0]
-            resigned_yearly = year_df[
+            resigned = year_df[
                 ~year_df["Resignee Checking"].isin(["ACTIVE", "Active"])
             ].drop_duplicates(subset=["Full Name"]).shape[0]
-            retained = total - resigned_yearly
+            retained = total - resigned
             retention_rate = (retained / total) * 100 if total > 0 else 0
-            attrition_rate = (resigned_yearly / total) * 100 if total > 0 else 0
+            attrition_rate = (resigned / total) * 100 if total > 0 else 0
             yearly_retention.append(retention_rate)
             yearly_attrition.append(attrition_rate)
         retention_rate = sum(yearly_retention) / len(yearly_retention) if yearly_retention else 0
@@ -295,23 +299,38 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
     
 
             if retention_view == "Gender":
-                # Retention by Gender - using Retention flag (0/1)
-                retention_gender = df_raw.groupby(["Year", "Gender"])["Retention"].sum().reset_index()
-                retention_rate_df = df_raw.groupby("Year")["Retention"].mean().reset_index()
-                retention_rate_df["RetentionRatePct"] = retention_rate_df["Retention"] * 100
-                
+                # Retention by Gender - filter for Active only
+                if selected_year == "All":
+                    df_filtered = df_raw[
+                        (df_raw["Calendar Year"].dt.year.between(2020, 2025)) &
+                        (df_raw["Resignee Checking"].isin(["ACTIVE", "Active"]))
+                    ].drop_duplicates(subset=["Full Name"])
+                    retention_gender = df_filtered.groupby(["Year", "Gender"]).size().reset_index(name="Retention")
+                    retention_rate_df = df_filtered.groupby("Year").size().reset_index(name="Count")
+                    retention_rate_df["RetentionRatePct"] = 100  # All are active
+                else:
+                    df_filtered = df_raw[
+                        (df_raw["Calendar Year"].dt.year == selected_year) &
+                        (df_raw["Resignee Checking"].isin(["ACTIVE", "Active"]))
+                    ].drop_duplicates(subset=["Full Name"])
+                    retention_gender = df_filtered.groupby(["Year", "Gender"]).size().reset_index(name="Retention")
+                    retention_rate_df = df_filtered.groupby("Year").size().reset_index(name="Count")
+                    retention_rate_df["RetentionRatePct"] = 100
+
                 gender_colors = {"Female": "#6495ED", "Male": "#00008B"}
-                
+
                 if retention_gender.empty:
                     st.warning(f"No retention data available for {selected_year}")
                 else:
+                    retention_gender["Year_str"] = retention_gender["Year"].astype(str)
+                    retention_rate_df["Year_str"] = retention_rate_df["Year"].astype(str)
                     fig = go.Figure()
                     for gender in retention_gender["Gender"].unique():
                         subset = retention_gender[retention_gender["Gender"] == gender]
                         color = gender_colors.get(gender, "#00008B")
-                        fig.add_bar(x=subset["Year"], y=subset["Retention"], name=gender,
+                        fig.add_bar(x=subset["Year_str"], y=subset["Retention"], name=gender,
                                     marker_color=color, yaxis="y1")
-                    fig.add_trace(go.Scatter(x=retention_rate_df["Year"], y=retention_rate_df["RetentionRatePct"],
+                    fig.add_trace(go.Scatter(x=retention_rate_df["Year_str"], y=retention_rate_df["RetentionRatePct"],
                                              mode="lines+markers", name="Retention Rate (%)",
                                              line={"color": "orange", "width": 3}, yaxis="y2"))
                     fig.update_layout(
@@ -326,25 +345,43 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
                             "side": "right",
                             "range": [80, 100]
                         },
-                        xaxis={"title": "Year"},
+                        xaxis={
+                            "title": "Year",
+                            "type": "category",
+                            "tickmode": "array",
+                            "tickvals": retention_gender["Year_str"].unique(),
+                            "ticktext": retention_gender["Year_str"].unique(),
+                            "showticklabels": False  # <-- Hide tick labels
+                        },
                         barmode="group",
-                        margin={"l": 60, "r": 60, "t": 20, "b": 60},
-                        legend={"x": 0.5, "y": -0.25, "xanchor": "center", "yanchor": "top", "orientation": "h"}
+                        margin={"l": 60, "r": 60, "t": 20, "b": 110},
+                        legend={
+                            "x": 0.5,
+                            "y": -0.55,
+                            "xanchor": "center",
+                            "yanchor": "top",
+                            "orientation": "h"
+                        }
                     )
                     st.plotly_chart(fig, use_container_width=True, key="retention_by_gender")
             else:
-                # Retention by Generation - using Retention flag (0/1)
+                # Retention by Generation - filter for Active only
                 if selected_year == "All":
-                    retention_gen = df_raw[df_raw["Year"].between(2020, 2025)].groupby(["Year", "Generation"])["Retention"].sum().reset_index()
-                    retention_rate_df = df_raw[df_raw["Year"].between(2020, 2025)].groupby("Year")["Retention"].mean().reset_index()
+                    df_filtered = df_raw[
+                        (df_raw["Calendar Year"].dt.year.between(2020, 2025)) &
+                        (df_raw["Resignee Checking"].isin(["ACTIVE", "Active"]))
+                    ].drop_duplicates(subset=["Full Name"])
+                    total_by_year_gen = df_filtered.groupby(["Year", "Generation"]).size().reset_index(name="Total")
+                    active_by_year_gen = df_filtered.groupby(["Year", "Generation"]).size().reset_index(name="Active")
                 else:
-                    retention_gen = df_raw[df_raw["Year"] == selected_year].groupby(["Year", "Generation"])["Retention"].sum().reset_index()
-                    retention_rate_df = df_raw[df_raw["Year"] == selected_year].groupby("Year")["Retention"].mean().reset_index()
-                
-                retention_rate_df["RetentionRatePct"] = retention_rate_df["Retention"] * 100
-                
-                # Normalize Generation values
-                df_raw["Generation"] = df_raw["Generation"].str.strip().str.title()
+                    df_filtered = df_raw[
+                        (df_raw["Calendar Year"].dt.year == selected_year) &
+                        (df_raw["Resignee Checking"].isin(["ACTIVE", "Active"]))
+                    ].drop_duplicates(subset=["Full Name"])
+                    total_by_year_gen = df_filtered.groupby(["Year", "Generation"]).size().reset_index(name="Total")
+                    active_by_year_gen = df_filtered.groupby(["Year", "Generation"]).size().reset_index(name="Active")
+                retention_df = pd.merge(total_by_year_gen, active_by_year_gen, on=["Year", "Generation"], how="left")
+                retention_df["RetentionRate"] = 100  # All are active
                 
                 generation_order = ["Baby Boomer", "Gen X", "Gen Z", "Millennial"]
                 generation_colors = {
@@ -354,45 +391,34 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
                     "Baby Boomer": "#00008B",
                     "Boomer": "#00008B"
                 }
-                
-                retention_gen["Generation"] = pd.Categorical(retention_gen["Generation"], categories=generation_order, ordered=True)
-                
-                if retention_gen.empty:
+                retention_df["Generation"] = pd.Categorical(retention_df["Generation"], categories=generation_order, ordered=True)
+
+                if retention_df.empty:
                     st.warning(f"No generation data available for {selected_year}")
                 else:
-                    # Calculate retention rate for each generation
-                    if selected_year == "All":
-                        gen_total = df_raw[df_raw["Year"].between(2020, 2025)].groupby(["Year", "Generation"]).size().reset_index(name="Total")
-                        gen_active = df_raw[(df_raw["Year"].between(2020, 2025)) & (df_raw["Retention"] == 1)].groupby(["Year", "Generation"]).size().reset_index(name="Active")
-                    else:
-                        gen_total = df_raw[df_raw["Year"] == selected_year].groupby(["Year", "Generation"]).size().reset_index(name="Total")
-                        gen_active = df_raw[(df_raw["Year"] == selected_year) & (df_raw["Retention"] == 1)].groupby(["Year", "Generation"]).size().reset_index(name="Active")
-                    
-                    gen_merged = pd.merge(gen_total, gen_active, on=["Year", "Generation"], how="left").fillna(0)
-                    gen_merged["RetentionRate"] = (gen_merged["Active"] / gen_merged["Total"].replace(0, 1) * 100).round(1)
-                    gen_merged.loc[gen_merged["Total"] == 0, "RetentionRate"] = 0.0
-                    gen_merged["RateText"] = gen_merged["RetentionRate"].astype(str) + "%"
-                    gen_merged["Generation"] = pd.Categorical(gen_merged["Generation"], categories=generation_order, ordered=True)
-                    
                     fig_retention = px.bar(
-                        gen_merged, x="Year", y="RetentionRate", color="Generation", barmode="group",
+                        retention_df, x="Year", y="RetentionRate", color="Generation", barmode="group",
+                        text=retention_df["RetentionRate"].round(1).astype(str) + "%",
                         color_discrete_map=generation_colors,
                         category_orders={"Generation": generation_order}
-                    )
-                    # Add retention rate text inside bars
-                    fig_retention.update_traces(
-                        text=gen_merged["RateText"],
-                        textposition="inside",
-                        textfont={"size": 11, "color": "white"}
                     )
                     fig_retention.update_layout(
                         height=280,
                         margin={"l": 20, "r": 20, "t": 20, "b": 110},
                         yaxis={"title": "Retention Rate (%)"},
-                        xaxis={"title": "Year"},
+                        xaxis={
+                            "title": "Year",
+                            "showticklabels": False  # <-- Hide tick labels
+                        },
                         uniformtext_minsize=10,
                         uniformtext_mode="hide",
-                        legend={"x": 0.5, "y": -0.25, "xanchor": "center", "yanchor": "top", "orientation": "h"}
+                        legend={
+                            "x": 0.5,
+                            "y": -0.55,
+                            "xanchor": "center",
+                            "yanchor": "top",
+                            "orientation": "h"
+                        }
                     )
                     st.plotly_chart(fig_retention, use_container_width=True, key="retention_by_generation")
                     st.markdown("<div style='height:1px'></div>", unsafe_allow_html=True)
