@@ -20,7 +20,7 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
         
         with summary_col1:
             st.markdown("""
-            - 🔒 **Strong Retention**: 91% retention rate demonstrates workforce stability and satisfaction
+            - 🔒 **Strong Retention**: 92.5% retention rate demonstrates workforce stability and satisfaction
             - 📉 **Low Attrition**: Consistent 9% attrition rate, well below industry benchmarks
             - 👥 **Gender Parity**: Both females and males show equal retention patterns (~91%)
             """)
