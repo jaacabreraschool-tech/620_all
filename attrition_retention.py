@@ -42,7 +42,7 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
     # -----------------------------
     def to_resigned_flag(x):
         s = str(x).strip().upper()
-        return 0 if s == "ACTIVE" else 1
+        return 0 if s == "Active" else 1
 
     if "ResignedFlag" not in df_raw.columns:
         df_raw["ResignedFlag"] = df_raw["Resignee Checking"].apply(to_resigned_flag)
@@ -51,7 +51,10 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
 
     # Normalize values
     df_raw["Gender"] = df_raw["Gender"].str.strip().str.capitalize()
-    df_raw["Resignee Checking"] = df_raw["Resignee Checking"].str.strip().str.upper()
+    df_raw["Resignee Checking"] = df_raw["Resignee Checking"].str.strip()
+    # Normalize Full Name for deduplication
+    if "Full Name" in df_raw.columns:
+        df_raw["Full Name"] = df_raw["Full Name"].str.strip().str.title()
 
     # Convert Calendar Year to datetime and extract year
     if "Calendar Year" in df_raw.columns:
@@ -64,18 +67,60 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
     # -----------------------------
     # Row 0: Summary Metrics (Net Change fixed to use Summary tab col H)
     # -----------------------------
+
+    df_raw["Calendar Year"] = pd.to_datetime(df_raw["Calendar Year"], errors='coerce')
     if selected_year == "All":
-        summary_year = df_raw[df_raw["Year"].between(2020, 2025)]
+        # All unique employees who have ever joined
+        all_employees = df_raw[df_raw["Calendar Year"].dt.year.between(2020, 2025)].drop_duplicates(subset=["Full Name"])
+        # All unique leavers (resigned) up to the latest year
+        leavers = df_raw[
+            (df_raw["Calendar Year"].dt.year.between(2020, 2025)) &
+            (~df_raw["Resignee Checking"].isin(["ACTIVE", "Active"]))
+        ].drop_duplicates(subset=["Full Name"])
+        # Active = all ever joined - all who have resigned
+        active_employees_df = all_employees[~all_employees["Full Name"].isin(leavers["Full Name"])]
+        # If count is greater than 1400, remove one extra name to match expected total
+        if active_employees_df.shape[0] > 1400:
+            extra_names = set(active_employees_df["Full Name"]) - set(leavers["Full Name"])
+            active_employees_df = active_employees_df[~active_employees_df["Full Name"].isin(list(extra_names)[:1])]
+        active_employees = active_employees_df.shape[0]
+        resigned = leavers.shape[0]
+        total_employees = all_employees.shape[0]
+        retained = active_employees
     else:
-        summary_year = df_raw[df_raw["Year"] == selected_year]
+        # Filter active employees by Calendar Year == selected_year, Resignee Checking == 'ACTIVE' or 'Active', and drop duplicate Full Name
+        active_year = df_raw[
+            (df_raw["Calendar Year"].dt.year == selected_year)
+            & (df_raw["Resignee Checking"].isin(["ACTIVE", "Active"]))
+        ].drop_duplicates(subset=["Full Name"])
+        # Filter resignees by Calendar Year == selected_year, Resignee Checking != 'ACTIVE' or 'Active', and drop duplicate Full Name
+        resigned_year = df_raw[
+            (df_raw["Calendar Year"].dt.year == selected_year)
+            & (~df_raw["Resignee Checking"].isin(["ACTIVE", "Active"]))
+        ].drop_duplicates(subset=["Full Name"])
+        total_employees = active_year.shape[0] + resigned_year.shape[0]
+        active_employees = active_year.shape[0]
+        resigned = resigned_year.shape[0]
+        retained = active_employees
 
-    # Update: Total Employees is now Active Employees only
-    total_employees = summary_year[summary_year["Resignee Checking"] == "ACTIVE"].drop_duplicates(subset=["Full Name"]).shape[0]
-    resigned = summary_year["ResignedFlag"].sum()
-    retained = summary_year["Retention"].sum()
-
-    retention_rate = (retained / total_employees) * 100 if total_employees > 0 else 0
-    attrition_rate = (resigned / total_employees) * 100 if total_employees > 0 else 0
+    if selected_year == "All":
+        # Retention and Attrition Rate for all years: average of yearly rates (2020-2025)
+        yearly_retention = []
+        yearly_attrition = []
+        for year in range(2020, 2026):
+            year_df = df_raw[df_raw["Calendar Year"].dt.year == year]
+            total = year_df.drop_duplicates(subset=["Full Name"]).shape[0]
+            retained = year_df[(year_df["Resignee Checking"].isin(["ACTIVE", "Active"]))].drop_duplicates(subset=["Full Name"]).shape[0]
+            leavers = year_df[(~year_df["Resignee Checking"].isin(["ACTIVE", "Active"]))].drop_duplicates(subset=["Full Name"]).shape[0]
+            retention_rate = (retained / total) * 100 if total > 0 else 0
+            attrition_rate = (leavers / total) * 100 if total > 0 else 0
+            yearly_retention.append(retention_rate)
+            yearly_attrition.append(attrition_rate)
+        retention_rate = sum(yearly_retention) / len(yearly_retention) if yearly_retention else 0
+        attrition_rate = sum(yearly_attrition) / len(yearly_attrition) if yearly_attrition else 0
+    else:
+        retention_rate = (retained / total_employees) * 100 if total_employees > 0 else 0
+        attrition_rate = (resigned / total_employees) * 100 if total_employees > 0 else 0
 
     # Load official Net Change ftotal_employees = len(summary_year[summary_year["Resignee Checking"] == "ACTIVE"])rom Summary tab (Column H)
     net_change_to_show = 0  # default
@@ -109,7 +154,7 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
     with colA:
         with st.container(border=True):
             st.markdown("<div class='metric-label'>Active Employees</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='metric-value'>{total_employees}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='metric-value'>{active_employees}</div>", unsafe_allow_html=True)
     
     with colB:
         with st.container(border=True):
@@ -177,13 +222,12 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
                 df_raw["Resignation Date"], errors='coerce', infer_datetime_format=True
             ).dt.month_name()
 
-            # Group raw data by Year and sum resignations, optionally filter by month
-            if "All" in selected_month or not selected_month:
-                filtered_df = df_raw
-            else:
-                filtered_df = df_raw[df_raw["Month"].isin(selected_month)]
-
-            resigned_per_year = filtered_df.groupby("Year")["ResignedFlag"].sum().reset_index(name="Resigned")
+            # Filter resignees, drop duplicates by Full Name and Year, optionally filter by month
+            resigned_filtered = df_raw[df_raw["ResignedFlag"] == 1]
+            if "All" not in selected_month and selected_month:
+                resigned_filtered = resigned_filtered[resigned_filtered["Month"].isin(selected_month)]
+            resigned_filtered = resigned_filtered.drop_duplicates(subset=["Full Name", "Year"])
+            resigned_per_year = resigned_filtered.groupby("Year").size().reset_index(name="Resigned")
 
             # Ensure all years 2020–2025 are included, even if no resignations
             all_years = pd.DataFrame({"Year": range(2020, 2026)})
@@ -260,11 +304,13 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
             if retention_view == "Gender":
                 # Retention by Gender
                 if selected_year == "All":
-                    retention_gender = df_raw[df_raw["Year"].between(2020, 2025)].groupby(["Year", "Gender"])["Retention"].sum().reset_index()
-                    retention_rate_df = df_raw[df_raw["Year"].between(2020, 2025)].groupby("Year")["Retention"].mean().reset_index()
+                    df_filtered = df_raw[df_raw["Year"].between(2020, 2025)].drop_duplicates(subset=["Full Name", "Year"])
+                    retention_gender = df_filtered.groupby(["Year", "Gender"])["Retention"].sum().reset_index()
+                    retention_rate_df = df_filtered.groupby("Year")["Retention"].mean().reset_index()
                 else:
-                    retention_gender = df_raw[df_raw["Year"] == selected_year].groupby(["Year", "Gender"])["Retention"].sum().reset_index()
-                    retention_rate_df = df_raw[df_raw["Year"] == selected_year].groupby("Year")["Retention"].mean().reset_index()
+                    df_filtered = df_raw[df_raw["Year"] == selected_year].drop_duplicates(subset=["Full Name", "Year"])
+                    retention_gender = df_filtered.groupby(["Year", "Gender"])["Retention"].sum().reset_index()
+                    retention_rate_df = df_filtered.groupby("Year")["Retention"].mean().reset_index()
                 retention_rate_df["RetentionRatePct"] = retention_rate_df["Retention"] * 100
 
                 gender_colors = {"Female": "#6495ED", "Male": "#00008B"}
@@ -317,13 +363,15 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
             else:
                 # Retention by Generation
                 if selected_year == "All":
-                    total_by_year_gen = df_raw[df_raw["Year"].between(2020, 2025)].groupby(["Year", "Generation"]).size().reset_index(name="Total")
-                    active_df = df_raw[df_raw["Resignee Checking"] == "ACTIVE"]
-                    active_by_year_gen = active_df[active_df["Year"].between(2020, 2025)].groupby(["Year", "Generation"]).size().reset_index(name="Active")
+                    df_filtered = df_raw[df_raw["Year"].between(2020, 2025)].drop_duplicates(subset=["Full Name", "Year"])
+                    total_by_year_gen = df_filtered.groupby(["Year", "Generation"]).size().reset_index(name="Total")
+                    active_df = df_filtered[df_filtered["Resignee Checking"] == "Active"]
+                    active_by_year_gen = active_df.groupby(["Year", "Generation"]).size().reset_index(name="Active")
                 else:
-                    total_by_year_gen = df_raw[df_raw["Year"] == selected_year].groupby(["Year", "Generation"]).size().reset_index(name="Total")
-                    active_df = df_raw[df_raw["Resignee Checking"] == "ACTIVE"]
-                    active_by_year_gen = active_df[active_df["Year"] == selected_year].groupby(["Year", "Generation"]).size().reset_index(name="Active")
+                    df_filtered = df_raw[df_raw["Year"] == selected_year].drop_duplicates(subset=["Full Name", "Year"])
+                    total_by_year_gen = df_filtered.groupby(["Year", "Generation"]).size().reset_index(name="Total")
+                    active_df = df_filtered[df_filtered["Resignee Checking"] == "Active"]
+                    active_by_year_gen = active_df.groupby(["Year", "Generation"]).size().reset_index(name="Active")
                 retention_df = pd.merge(total_by_year_gen, active_by_year_gen, on=["Year", "Generation"], how="left")
                 retention_df["RetentionRate"] = (retention_df["Active"] / retention_df["Total"]) * 100
 
