@@ -69,14 +69,15 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
     else:
         summary_year = df_raw[df_raw["Year"] == selected_year]
 
-    total_employees = len(summary_year)
+    # Update: Total Employees is now Active Employees only
+    total_employees = summary_year[summary_year["Resignee Checking"] == "ACTIVE"].drop_duplicates(subset=["Full Name"]).shape[0]
     resigned = summary_year["ResignedFlag"].sum()
     retained = summary_year["Retention"].sum()
 
     retention_rate = (retained / total_employees) * 100 if total_employees > 0 else 0
     attrition_rate = (resigned / total_employees) * 100 if total_employees > 0 else 0
 
-    # Load official Net Change from Summary tab (Column H)
+    # Load official Net Change ftotal_employees = len(summary_year[summary_year["Resignee Checking"] == "ACTIVE"])rom Summary tab (Column H)
     net_change_to_show = 0  # default
     try:
         summary_df = pd.read_excel(summary_file, sheet_name="Summary")
@@ -107,12 +108,12 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
     
     with colA:
         with st.container(border=True):
-            st.markdown("<div class='metric-label'>Total Employees</div>", unsafe_allow_html=True)
+            st.markdown("<div class='metric-label'>Active Employees</div>", unsafe_allow_html=True)
             st.markdown(f"<div class='metric-value'>{total_employees}</div>", unsafe_allow_html=True)
     
     with colB:
         with st.container(border=True):
-            st.markdown("<div class='metric-label'>Resigned</div>", unsafe_allow_html=True)
+            st.markdown("<div class='metric-label'>Leavers</div>", unsafe_allow_html=True)
             st.markdown(f"<div class='metric-value'>{resigned}</div>", unsafe_allow_html=True)
     
     with colC:
