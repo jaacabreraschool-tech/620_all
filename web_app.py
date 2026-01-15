@@ -51,10 +51,19 @@ if "Year" not in df_attrition.columns and "Calendar Year" in df_attrition.column
 st.title("ACJ Company Dashboard")
 
 # -----------------------------
-# Global Year Selector
+# Global Year Selector (persist selection across refresh)
 # -----------------------------
 year_options = ["All"] + list(range(2020, 2026))
-selected_year = st.radio("Select Year", year_options, index=0, horizontal=True)
+if "selected_year" not in st.session_state:
+    st.session_state.selected_year = year_options[0]
+
+selected_year = st.radio(
+    "Select Year",
+    year_options,
+    index=year_options.index(st.session_state.selected_year),
+    horizontal=True,
+    key="selected_year"
+)
 
 # -----------------------------
 # Initialize session state for active tab
@@ -107,7 +116,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -----------------------------
-# Tab navigation with buttons
+# Tab navigation with buttons (persist active tab using query params)
 # -----------------------------
 tab_names = [
     "👥 Workforce",
@@ -117,14 +126,27 @@ tab_names = [
     "📚 About Us"
 ]
 
-# Create tab buttons
+# Read active_tab from query params if present (for persistence on refresh)
+query_params = st.query_params
+if "active_tab" in query_params:
+    try:
+        st.session_state.active_tab = int(query_params["active_tab"])
+    except Exception:
+        if "active_tab" not in st.session_state:
+            st.session_state.active_tab = 0
+else:
+    if "active_tab" not in st.session_state:
+        st.session_state.active_tab = 0
+
 tab_cols = st.columns(len(tab_names))
 for idx, (col, name) in enumerate(zip(tab_cols, tab_names)):
-    # Highlight active tab
     button_type = "primary" if st.session_state.active_tab == idx else "secondary"
     if col.button(name, key=f"tab_{idx}", use_container_width=True, type=button_type):
         st.session_state.active_tab = idx
+        st.query_params["active_tab"] = str(idx)
         st.rerun()
+
+st.query_params["active_tab"] = str(st.session_state.active_tab)
 
 st.markdown("---")
 
@@ -134,16 +156,16 @@ st.markdown("---")
 active_tab = st.session_state.active_tab
 
 if active_tab == 0:  # Workforce
-    workforce.render(df, df_raw, selected_year)
+    workforce.render(df, df_raw, st.session_state.selected_year)
 
 elif active_tab == 1:  # Attrition & Retention
-    attrition.render(df, df_raw, selected_year, df_attrition)
+    attrition.render(df, df_raw, st.session_state.selected_year, df_attrition)
 
 elif active_tab == 2:  # Career Progression
-    career.render(df, df_raw, selected_year)
+    career.render(df, df_raw, st.session_state.selected_year)
 
 elif active_tab == 3:  # Survey & Feedback
-    survey.render(df, df_raw, selected_year)
+    survey.render(df, df_raw, st.session_state.selected_year)
 
 elif active_tab == 4:  # About Us
-    aboutus.render(df, df_raw, selected_year)
+    aboutus.render(df, df_raw, st.session_state.selected_year)
