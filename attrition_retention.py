@@ -296,8 +296,13 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
 
             if retention_view == "Gender":
                 # Retention by Gender - using Retention flag (0/1)
-                retention_gender = df_raw.groupby(["Year", "Gender"])["Retention"].sum().reset_index()
-                retention_rate_df = df_raw.groupby("Year")["Retention"].mean().reset_index()
+                if selected_year == "All":
+                    retention_gender = df_raw.groupby(["Year", "Gender"])["Retention"].sum().reset_index()
+                    retention_rate_df = df_raw.groupby("Year")["Retention"].mean().reset_index()
+                else:
+                    retention_gender = df_raw[df_raw["Year"] == selected_year].groupby(["Year", "Gender"])["Retention"].sum().reset_index()
+                    retention_rate_df = df_raw[df_raw["Year"] == selected_year].groupby("Year")["Retention"].mean().reset_index()
+                
                 retention_rate_df["RetentionRatePct"] = retention_rate_df["Retention"] * 100
                 
                 gender_colors = {"Female": "#6495ED", "Male": "#00008B"}
@@ -336,12 +341,8 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
                 # Retention by Generation - using Retention flag (0/1)
                 if selected_year == "All":
                     retention_gen = df_raw[df_raw["Year"].between(2020, 2025)].groupby(["Year", "Generation"])["Retention"].sum().reset_index()
-                    retention_rate_df = df_raw[df_raw["Year"].between(2020, 2025)].groupby("Year")["Retention"].mean().reset_index()
                 else:
                     retention_gen = df_raw[df_raw["Year"] == selected_year].groupby(["Year", "Generation"])["Retention"].sum().reset_index()
-                    retention_rate_df = df_raw[df_raw["Year"] == selected_year].groupby("Year")["Retention"].mean().reset_index()
-                
-                retention_rate_df["RetentionRatePct"] = retention_rate_df["Retention"] * 100
                 
                 # Normalize Generation values
                 df_raw["Generation"] = df_raw["Generation"].str.strip().str.title()
@@ -365,24 +366,49 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
                         gen_total = df_raw[df_raw["Year"].between(2020, 2025)].groupby(["Year", "Generation"]).size().reset_index(name="Total")
                         gen_active = df_raw[(df_raw["Year"].between(2020, 2025)) & (df_raw["Retention"] == 1)].groupby(["Year", "Generation"]).size().reset_index(name="Active")
                     else:
-                        gen_total = df_raw[df_raw["Year"] == selected_year].groupby(["Year", "Generation"]).size().reset_index(name="Total")
-                        gen_active = df_raw[(df_raw["Year"] == selected_year) & (df_raw["Retention"] == 1)].groupby(["Year", "Generation"]).size().reset_index(name="Active")
+                        gen_total = df_raw[df_raw["Year"] == selected_year].groupby("Generation").size().reset_index(name="Total")
+                        gen_total["Year"] = selected_year
+                        gen_active = df_raw[(df_raw["Year"] == selected_year) & (df_raw["Retention"] == 1)].groupby("Generation").size().reset_index(name="Active")
+                        gen_active["Year"] = selected_year
                     
                     gen_merged = pd.merge(gen_total, gen_active, on=["Year", "Generation"], how="left").fillna(0)
                     gen_merged["RetentionRate"] = (gen_merged["Active"] / gen_merged["Total"].replace(0, 1) * 100).round(1)
                     gen_merged.loc[gen_merged["Total"] == 0, "RetentionRate"] = 0.0
-                    gen_merged["RateText"] = gen_merged["RetentionRate"].astype(str) + "%"
+                    gen_merged["RateText"] = gen_merged["RetentionRate"].apply(lambda x: f"{x:.1f}%")
                     gen_merged["Generation"] = pd.Categorical(gen_merged["Generation"], categories=generation_order, ordered=True)
+                    gen_merged["Year"] = gen_merged["Year"].astype(str)  # Convert Year to string for proper x-axis display
+                    
+                    # Ensure all generations are present even if no data
+                    if selected_year != "All":
+                        year_str = str(selected_year)
+                        for gen in generation_order:
+                            if gen not in gen_merged["Generation"].values:
+                                new_row = pd.DataFrame({
+                                    "Year": [year_str],
+                                    "Generation": [gen],
+                                    "Total": [0],
+                                    "Active": [0],
+                                    "RetentionRate": [0.0],
+                                    "RateText": ["0.0%"]
+                                })
+                                gen_merged = pd.concat([gen_merged, new_row], ignore_index=True)
+                    
+                    # Sort to ensure consistent ordering
+                    gen_merged = gen_merged.sort_values(["Year", "Generation"]).reset_index(drop=True)
                     
                     fig_retention = px.bar(
                         gen_merged, x="Year", y="RetentionRate", color="Generation", barmode="group",
                         color_discrete_map=generation_colors,
                         category_orders={"Generation": generation_order}
                     )
-                    # Add retention rate text inside bars
+                    # Update traces with text from the dataframe in correct order
+                    for i, trace in enumerate(fig_retention.data):
+                        gen_name = trace.name
+                        trace_data = gen_merged[gen_merged["Generation"] == gen_name].sort_values("Year")
+                        trace.text = trace_data["RateText"].values
+                        trace.textposition = "inside"
+                    
                     fig_retention.update_traces(
-                        text=gen_merged["RateText"],
-                        textposition="inside",
                         textfont={"size": 11, "color": "white"}
                     )
                     fig_retention.update_layout(
@@ -394,7 +420,7 @@ def render(df, df_raw, selected_year, df_attrition=None, summary_file="HR Cleane
                         uniformtext_mode="hide",
                         legend={"x": 0.5, "y": -0.25, "xanchor": "center", "yanchor": "top", "orientation": "h"}
                     )
-                    st.plotly_chart(fig_retention, use_container_width=True, key="retention_by_generation")
+                    st.plotly_chart(fig_retention, use_container_width=True, key=f"retention_by_generation_{selected_year}")
                     st.markdown("<div style='height:1px'></div>", unsafe_allow_html=True)
 
     # -----------------------------

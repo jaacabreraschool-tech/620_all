@@ -3,8 +3,14 @@ import pandas as pd
 data = pd.read_excel("HR Cleaned Data 01.09.26.xlsx", sheet_name="Data")
 
 # Print all column names
+print("="*60)
 print("All columns in the dataset:")
-print(data.columns.tolist())
+print("="*60)
+for i, col in enumerate(data.columns.tolist(), 1):
+    print(f"{i:2d}. {col}")
+print("="*60)
+print(f"Total columns: {len(data.columns)}")
+print("="*60)
 
 # Normalize columns
 if "Full Name" in data.columns:
@@ -34,13 +40,17 @@ if "Year Joined" in filtered.columns:
 else:
     print("Year Joined column not found")
 
-# Select columns for output
-base_columns = ["Full Name", "Gender", "Tenure", "Position/Level", "Generation", "Resignee Checking", "Year"]
-extra_columns = []
-for col in ["Joined Date", "Resignation Date"]:
-    if col in data.columns:
-        extra_columns.append(col)
-columns = base_columns + extra_columns
+# Remove duplicates across ALL columns
+print("\n" + "="*60)
+print("Removing duplicates across all columns...")
+print("="*60)
+print(f"Rows before deduplication: {len(filtered)}")
+filtered_all_dedup = filtered.drop_duplicates()
+print(f"Rows after deduplication: {len(filtered_all_dedup)}")
 
-# Print the filtered data
-print(len(filtered))
+# Export to Excel with all columns
+output_filename = "HR_Data_Deduplicated.xlsx"
+filtered_all_dedup.to_excel(output_filename, index=False, sheet_name="Data")
+print(f"\n✓ Excel file saved: {output_filename}")
+print(f"✓ Total columns exported: {len(filtered_all_dedup.columns)}")
+print("="*60)
