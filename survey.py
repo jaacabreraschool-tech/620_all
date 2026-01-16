@@ -77,42 +77,11 @@ def render(df, df_raw, selected_year):
         # Weighted engagement score (Outstanding=100, Average=50, Needs Improvement=0)
         avg_engagement_score = (avg_outstanding + (avg_average * 0.5)) / (avg_outstanding + avg_average + avg_needs_improvement) * 100
         
-        # Top rated dimension
-        engagement_year_copy = engagement_year.copy()
-        engagement_year_copy["Score"] = (engagement_year_copy["Outstanding"] * 100 + engagement_year_copy["Average"] * 50) / 150 * 100
-        top_dimension = engagement_year_copy.nlargest(1, "Score").iloc[0]
-        top_dimension_name = top_dimension["Dimensions"]
-        top_dimension_score = top_dimension["Score"]
-        
-        # Count dimensions needing improvement (< 60% score)
-        needs_improvement_count = len(engagement_year_copy[engagement_year_copy["Score"] < 60])
-        
-        # YoY Change (if previous year data exists)
-        if selected_year == "All":
-            yoy_change = 0
-        else:
-            previous_year = int(selected_year) - 1
-            engagement_previous = df_engagement[df_engagement["Year"] == previous_year]
-
-            if not engagement_previous.empty:
-                prev_outstanding = engagement_previous["Outstanding"].mean() * 100
-                prev_average = engagement_previous["Average"].mean() * 100
-                prev_needs_improvement = engagement_previous["Needs Improvement"].mean() * 100
-                prev_engagement_score = (prev_outstanding + (prev_average * 0.5)) / (prev_outstanding + prev_average + prev_needs_improvement) * 100
-                yoy_change = avg_engagement_score - prev_engagement_score
-            else:
-                yoy_change = 0
-    else:
-        avg_engagement_score = 0
-        top_dimension_name = "N/A"
-        top_dimension_score = 0
-        needs_improvement_count = 0
-        yoy_change = 0
-
+    
     # -----------------------------
     # Top metrics row (5 metrics)
     # -----------------------------
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2 = st.columns(2)
     
     with col1:
         with st.container(border=True):
@@ -120,24 +89,6 @@ def render(df, df_raw, selected_year):
             st.markdown(f"<div class='metric-value'>{avg_engagement_score:.1f}%</div>", unsafe_allow_html=True)
     
     with col2:
-        with st.container(border=True):
-            st.markdown("<div class='metric-label'>Top Rated Dimension</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='metric-value' style='font-size: 14px;'>{top_dimension_name}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='metric-label' style='font-size: 12px;'>{top_dimension_score:.1f}%</div>", unsafe_allow_html=True)
-    
-    with col3:
-        with st.container(border=True):
-            st.markdown("<div class='metric-label'>Needs Improvement Areas</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='metric-value'>{needs_improvement_count}</div>", unsafe_allow_html=True)
-    
-    with col4:
-        with st.container(border=True):
-            st.markdown("<div class='metric-label'>YoY Change</div>", unsafe_allow_html=True)
-            change_color = "#2E8B57" if yoy_change >= 0 else "#B22222"
-            change_symbol = "+" if yoy_change >= 0 else ""
-            st.markdown(f"<div class='metric-value' style='color: {change_color};'>{change_symbol}{yoy_change:.1f}%</div>", unsafe_allow_html=True)
-    
-    with col5:
         with st.container(border=True):
             st.markdown("<div class='metric-label'>Survey Participation Rate</div>", unsafe_allow_html=True)
             st.markdown(f"<div class='metric-value'>{participation_rate:.1f}%</div>", unsafe_allow_html=True)
