@@ -123,7 +123,7 @@ tab_names = [
     "🔄 Attrition & Retention",
     "🎯 Career Progression",
     "💬 Survey & Feedback",
-    "📚 About Us"
+    "📚 About Me"
 ]
 
 # Read active_tab from query params if present (for persistence on refresh)
